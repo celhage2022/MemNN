@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 lr = 0.001
-margin = 0.1
+margin = torch.tensor(0.1, dtype=torch.float32)
 total_epochs = 100
 embedding_dimension = 100
 data_files = ["/home/celhage/Documents/ei2/DEEP/presentation/MNN/data/en-valid/qa1_test.txt", "/home/celhage/Documents/ei2/DEEP/presentation/MNN/data/en-valid/qa1_train.txt" ]

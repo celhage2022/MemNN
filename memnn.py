@@ -44,8 +44,8 @@ def parse_line_add_dict(number, line, dictionnary):
 def init_weights(atype, feature_space, embedding_dimension, winit):
     weights = {}
 
-    u0 = winit * torch.randn(embedding_dimension, feature_space)
-    ur = winit * torch.randn(embedding_dimension, feature_space)
+    u0 = winit * torch.randn(embedding_dimension, feature_space, requires_grad=True)
+    ur = winit * torch.randn(embedding_dimension, feature_space, requires_grad=True)
     weights['u0'] = u0
     weights['ur'] = ur
 
@@ -112,7 +112,7 @@ def O(x_feature_rep, memory, u0, atype):
     return [x_feature_rep, mo1]
 
 def phix(feature_rep_list, atype):
-    mapped = torch.zeros(3 * len(feature_rep_list[0]), 1, dtype=atype)
+    mapped = torch.zeros(3 * len(feature_rep_list[0]), 1, dtype=atype, requires_grad=True)
     for i, feature_rep in enumerate(feature_rep_list):
         for j, value in enumerate(feature_rep):
             if i == 1:
@@ -122,9 +122,9 @@ def phix(feature_rep_list, atype):
     return mapped
 
 def phiy(feature_rep, atype):
-    mapped = torch.zeros(3 * len(feature_rep), 1, dtype=atype)
+    mapped = torch.zeros(3 * len(feature_rep), 1, dtype=atype, requires_grad=True)
     for i, value in enumerate(feature_rep):
-        mapped[2 * len(feature_rep) + i] = torch.tensor(value, dtype=atype)
+        mapped[2 * len(feature_rep) + i] = torch.tensor(value, dtype=atype, requires_grad=True)
     return mapped
 
 def s(x_feature_rep_list, y_feature_rep, u, atype):
@@ -158,9 +158,9 @@ def sr(x_feature_rep_list, vocab_dict, ur, atype):
 def marginRankingLoss(comb, x_feature_rep, memory, vocab_dict, gold_labels, margin, atype):
     u0 = comb[0]
     ur = comb[1]
-    total_loss = 0
-    m1_loss = 0
-    r_loss = 0
+    total_loss = torch.tensor(0, dtype = atype, requires_grad=True)
+    m1_loss = torch.tensor(0, dtype= atype, requires_grad=True)
+    r_loss = torch.tensor(0,dtype = atype, requires_grad=True)
 
     correct_m1 = gold_labels[0]
     correct_r = gold_labels[1]
@@ -168,7 +168,7 @@ def marginRankingLoss(comb, x_feature_rep, memory, vocab_dict, gold_labels, marg
     input_1 = [x_feature_rep]
     for i, memory_item in enumerate(memory):
         if not np.array_equal(memory_item, correct_m1):
-            m1l = max(0, margin - s(input_1, correct_m1, u0, atype) + s(input_1, memory_item, u0, atype))
+            m1l = torch.max(torch.tensor(0, dtype=atype, requires_grad=True), margin - s(input_1, correct_m1, u0, atype) + s(input_1, memory_item, u0, atype))
             m1_loss += m1l
 
     correct_r_feature_rep = word2OneHot(correct_r, vocab_dict)
@@ -177,7 +177,7 @@ def marginRankingLoss(comb, x_feature_rep, memory, vocab_dict, gold_labels, marg
         # if not np.array_equal(k, correct_r):
         if k != correct_r:
             k_feature_rep = word2OneHot(k, vocab_dict)
-            rl = max(0, margin - s(input_r, correct_r_feature_rep, ur, atype) + s(input_r, k_feature_rep, ur, atype))
+            rl = torch.max(torch.tensor(0, dtype=atype, requires_grad=True), margin - s(input_r, correct_r_feature_rep, ur, atype) + s(input_r, k_feature_rep, ur, atype))
             r_loss += rl
 
     total_loss = m1_loss + r_loss
@@ -329,6 +329,3 @@ def answer(x_feature_rep, memory, vocab_dict, uo, ur, atype):
     output = O(x_feature_rep, memory, uo, atype)
     answer = R(output, vocab_dict, ur, atype)
     return answer
-
-def carre(x):
-    return(x**2)
