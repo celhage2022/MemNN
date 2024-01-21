@@ -11,9 +11,15 @@ MemNN have 4 components:
 
 The dataset is composed of tasks in English and questions with their answer and the index of the task giving the answer. Here's an example :
 
+
 1 Mary moved to the bathroom.
+
 2 John went to the hallway.
+
 3 Where is Mary?        bathroom 1
+
 4 Daniel went back to the hallway.
+
 5 Sandra moved to the garden.
+
 6 Where is Daniel?      hallway 4
