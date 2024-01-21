@@ -12,7 +12,7 @@ def create_dict(data_files):
     Créé le dictionnaire W
     '''
     dictionary = {}
-    number = 1
+    number = 0
 
     for file in data_files:
         with open(file, 'r') as f:
@@ -31,14 +31,28 @@ def parse_line_add_dict(number, line, dictionnary):
     porter = nltk.stem.PorterStemmer()
     lemmed_sentence = [porter.stem(mot) for mot in tokenized_line]
     stop_words = nltk.corpus.stopwords.words('english')
-    unstopworded_sentence = [mot.lower() for mot in lemmed_sentence if mot.lower() not in stop_words]
+    unstopworded_sentence = [mot for mot in lemmed_sentence if mot.lower() not in stop_words]
+    unstopworded_sentence_sans_chiffre = [element for element in unstopworded_sentence if not str(element).isdigit()]
     
-    for mot in unstopworded_sentence :
+    for mot in unstopworded_sentence_sans_chiffre :
         if mot not in dictionnary:
             dictionnary[mot] = number
             number +=1
     return number, dictionnary
 
+
+def init_weights(atype, feature_space, embedding_dimension, winit):
+    weights = {}
+
+    u0 = winit * torch.randn(embedding_dimension, feature_space)
+    ur = winit * torch.randn(embedding_dimension, feature_space)
+    weights['u0'] = u0
+    weights['ur'] = ur
+
+    # for k in weights.keys():
+    #     weights[k] = weights[k].to(atype)
+
+    return weights
 
 
 def I(x, vocab, atype):
@@ -53,14 +67,14 @@ def I(x, vocab, atype):
     - feature_rep (np.ndarray): La représentation one-hot de la séquence.
     """
     words = x.split()
-    feature_rep = np.zeros(len(vocab))
+    feature_rep = torch.zeros(len(vocab), dtype=atype)
 
     for w in words:
         w = w.rstrip('?.')
         onehot = word2OneHot(w, vocab)
         feature_rep += onehot
 
-    return feature_rep.astype(atype)
+    return feature_rep
 
 
 def word2OneHot(word, vocab):
@@ -98,20 +112,20 @@ def O(x_feature_rep, memory, u0, atype):
     return [x_feature_rep, mo1]
 
 def phix(feature_rep_list, atype):
-    mapped = torch.zeros(3 * len(feature_rep_list[0]), 1)
-    for i, feature_rep in enumerate(feature_rep_list, start=1):
-        for j, value in enumerate(feature_rep, start=1):
+    mapped = torch.zeros(3 * len(feature_rep_list[0]), 1, dtype=atype)
+    for i, feature_rep in enumerate(feature_rep_list):
+        for j, value in enumerate(feature_rep):
             if i == 1:
                 mapped[j] = value
             else:
                 mapped[len(feature_rep) + j] = value
-    return mapped.to(atype)
+    return mapped
 
 def phiy(feature_rep, atype):
-    mapped = torch.zeros(3 * len(feature_rep), 1)
-    for i, value in enumerate(feature_rep, start=1):
-        mapped[2 * len(feature_rep) + i] = value
-    return mapped.to(atype)
+    mapped = torch.zeros(3 * len(feature_rep), 1, dtype=atype)
+    for i, value in enumerate(feature_rep):
+        mapped[2 * len(feature_rep) + i] = torch.tensor(value, dtype=atype)
+    return mapped
 
 def s(x_feature_rep_list, y_feature_rep, u, atype):
     phi_y = phiy(y_feature_rep, atype)
@@ -121,7 +135,7 @@ def s(x_feature_rep_list, y_feature_rep, u, atype):
 
 def so(x_feature_rep_list, memory, u0, atype):
     score_dict = {}
-    for i, memory_item in enumerate(memory, start=1):
+    for i, memory_item in enumerate(memory):
         score = s(x_feature_rep_list, memory_item, u0, atype)
         score_dict[score] = i
     return score_dict
@@ -152,14 +166,15 @@ def marginRankingLoss(comb, x_feature_rep, memory, vocab_dict, gold_labels, marg
     correct_r = gold_labels[1]
 
     input_1 = [x_feature_rep]
-    for i, memory_item in enumerate(memory, start=1):
-        if memory_item != correct_m1:
+    for i, memory_item in enumerate(memory):
+        if not np.array_equal(memory_item, correct_m1):
             m1l = max(0, margin - s(input_1, correct_m1, u0, atype) + s(input_1, memory_item, u0, atype))
             m1_loss += m1l
 
     correct_r_feature_rep = word2OneHot(correct_r, vocab_dict)
     input_r = [x_feature_rep, correct_m1]
     for k in vocab_dict.keys():
+        # if not np.array_equal(k, correct_r):
         if k != correct_r:
             k_feature_rep = word2OneHot(k, vocab_dict)
             rl = max(0, margin - s(input_r, correct_r_feature_rep, ur, atype) + s(input_r, k_feature_rep, ur, atype))
@@ -314,3 +329,6 @@ def answer(x_feature_rep, memory, vocab_dict, uo, ur, atype):
     output = O(x_feature_rep, memory, uo, atype)
     answer = R(output, vocab_dict, ur, atype)
     return answer
+
+def carre(x):
+    return(x**2)
